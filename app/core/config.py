@@ -57,6 +57,12 @@ class Settings(BaseSettings):
     langfuse_public_key: str = ""
     langfuse_secret_key: SecretStr = SecretStr("")
 
+    # --- System & Resource Limits ---
+    # Config-driven RAM ceiling (MB). Default 4096 reflects the project's stated
+    # 4GB budget assumption for local dev/testing. Adjust in production .env to match
+    # actual deployment host hardware limits.
+    max_ram_mb: int = 4096
+
     # --- Prompt versioning ---
     prompt_version: str = "answer_generation_v1"
 

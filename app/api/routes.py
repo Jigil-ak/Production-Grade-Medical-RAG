@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from app.core.config import get_settings
 from app.core.exceptions import IngestionError
 from app.core.logging import get_logger
+from app.core.system_health import SystemHealthReport
 from app.core.types import Chunk, QueryResult
 from app.embedding.service import MiniLMEmbeddingService
 from app.generation.citation_enforcer import CitationEnforcer
@@ -293,3 +294,11 @@ async def get_chunk_by_id(chunk_id: str) -> Chunk:
         )
 
     return chunk
+
+
+@router.get("/health/system", response_model=SystemHealthReport)
+async def get_system_health() -> SystemHealthReport:
+    """Check system health, memory RSS against settings.max_ram_mb, and storage usage."""
+    from app.core.system_health import check_system_health
+
+    return check_system_health()

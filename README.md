@@ -48,47 +48,14 @@ copy .env.example .env
 # Edit .env: add GROQ_API_KEY (required)
 ```
 
-### Local Development
+### Local Development (No Docker)
 
-> ⚠️ **Do NOT use `docker compose up` locally.** The Docker Desktop daemon alone commits ~1.2GB of RAM before your Python process starts — fatal on a 4GB budget. Local dev runs `uvicorn` directly.
-
-```bash
-# Run the API server
-uvicorn app.main:app --reload
-
-# Run tests
-pytest tests/ -v
-```
-
-### Data Setup
-
-1. **Source PDF**: Place your medical PDF at `data/raw/` (you provide this — the system does not fetch or generate it).
-2. **Ingest**: `POST /ingest` to process the PDF into chunks.
-3. **Query**: `POST /query` with `{"question": "..."}` to get an answer with citations.
-4. **Verify**: `GET /chunk/{chunk_id}` to look up any cited chunk by ID.
-
-## Project Structure
-
-```
-app/
-├── core/           # Types, config, exceptions, logging, constants
-├── embedding/      # EmbeddingService Protocol + MiniLM implementation
-├── ingestion/      # PDF loader, tokenizer-aware chunker
-├── retrieval/      # VectorStore, BM25, hybrid fusion, reranker
-├── generation/     # LLMClient, prompt provider, citation enforcer
-├── api/            # FastAPI routes
-├── config/prompts/ # YAML prompt templates (Phase 2)
-└── eval/           # Golden dataset validation, RAGAS eval (Phase 3)
-tests/
-docs/
-├── architecture.md
-├── sequence_diagram.md
-└── ADR/
-data/
-├── raw/            # Source PDF (you place this)
-├── processed/      # ChromaDB, BM25 index (gitignored)
-└── golden/         # Golden dataset (Phase 3, gitignored)
-```
+> ⚠️ **DO NOT run `docker compose up` locally.** The Docker Desktop daemon alone commits ~1.2GB of RAM before your Python process even starts, which is fatal against our hard ~4GB RAM budget. Docker is used for CI workflows only.
+>
+> Local development runs `uvicorn` directly:
+> ```bash
+> uvicorn app.main:app --reload
+> ```
 
 ## Phase Status
 
@@ -97,15 +64,15 @@ data/
 | 0 | ✅ | Repo skeleton, config, types, logging, docs |
 | 1 | ✅ | Ingest → Chunk → Embed → Retrieve → Cite |
 | 2 | ✅ | Hybrid search, reranking, citation enforcement |
-| 3 | ⬜ | Golden dataset validation, RAGAS eval, CI gate |
-| 4 | ⬜ | Ops & maintenance guardrails |
+| 3 | ✅ | Golden dataset validation, RAGAS eval, CI gate |
+| 4 | ✅ | Maintenance, system health monitoring & production readiness |
 
 ## Design Decisions
 
 See the [ADR directory](docs/ADR/) for documented architectural decisions:
 - [ADR-001](docs/ADR/ADR-001-why-chroma-not-pinecone.md): Why ChromaDB over Pinecone
 - [ADR-002](docs/ADR/ADR-002-reranker-choice.md): Reranker model choice (TinyBERT 14MB vs MiniLM-L-6 250MB)
-- ADR-003: Citation threshold recalibration (Phase 3)
+- [ADR-003](docs/ADR/ADR-003-citation-threshold-recalibration.md): Citation support threshold recalibration (0.65)
 
 ## Hybrid Search vs. Vector-Only Ranking
 
@@ -123,3 +90,4 @@ In Phase 2, hybrid retrieval combines dense vector search with sparse BM25 keywo
 - **Phase 0**: `.venv` ~1.35 GB | `data/` ~0 MB
 - **Phase 1**: `.venv` ~1.35 GB | `data/` ~15.5 MB (source PDF `Medical_book.pdf`)
 - **Phase 2**: `.venv` ~1.35 GB | `data/` ~64.3 MB (Chroma persistent DB + BM25 index + NLTK data)
+- **Phase 3 & 4**: `.venv` ~1.35 GB | `data/` ~64.3 MB (Full system ready for production)
