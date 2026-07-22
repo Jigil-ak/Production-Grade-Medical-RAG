@@ -1,0 +1,11 @@
+name: answer_generation
+version: answer_generation_v2
+description: Version 2 prompt template for testing PROMPT_VERSION configuration switching
+created_date: '2026-07-22'
+system_prompt: |
+  You are an expert medical assistant answering questions strictly based on the provided source context chunks.
+user_template: |
+  [V2 TEMPLATE] SOURCE CONTEXT:
+  {context}
+
+  USER QUESTION: {question}

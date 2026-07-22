@@ -233,32 +233,35 @@ async def query_medical_rag(request: QueryRequest) -> QueryResult:
         bm25_top_k=settings.retrieval.bm25_top_k,
     )
 
-    # 2. Cross-Encoder Reranking
+    # 2. Cross-Encoder Reranking (rerank down to rerank_top_k pool)
     reranked_chunks = reranker.rerank(
         query=request.question,
         chunks=fused_candidates,
         top_k=settings.retrieval.rerank_top_k,
     )
 
-    chunk_ids = [c.chunk_id for c in reranked_chunks]
+    # 3. Slice to final_answer_k candidates for LLM prompt context
+    final_chunks = reranked_chunks[: settings.retrieval.final_answer_k]
 
-    # 3. Prompt Versioning
+    chunk_ids = [c.chunk_id for c in final_chunks]
+
+    # 4. Prompt Versioning
     prompt_template = prompt_provider.get(
         name="answer_generation", version=settings.prompt_version
     )
 
-    # 4. LLM Generation
+    # 5. LLM Generation
     raw_result = llm_client.generate_answer_with_citations(
         question=request.question,
-        retrieved_chunks=reranked_chunks,
+        retrieved_chunks=final_chunks,
         prompt_version=prompt_template.version,
     )
 
-    # 5. Citation Enforcement (MAX-over-sentences support scoring)
+    # 6. Citation Enforcement (MAX-over-sentences support scoring)
     final_result = citation_enforcer.enforce_citations(
         raw_answer=raw_result.answer,
         raw_citations=raw_result.citations,
-        retrieved_chunks=reranked_chunks,
+        retrieved_chunks=final_chunks,
         prompt_version=prompt_template.version,
     )
 

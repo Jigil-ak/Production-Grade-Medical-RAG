@@ -96,7 +96,7 @@ data/
 |-------|--------|-------------|
 | 0 | ✅ | Repo skeleton, config, types, logging, docs |
 | 1 | ✅ | Ingest → Chunk → Embed → Retrieve → Cite |
-| 2 | ⬜ | Hybrid search, reranking, citation enforcement |
+| 2 | ✅ | Hybrid search, reranking, citation enforcement |
 | 3 | ⬜ | Golden dataset validation, RAGAS eval, CI gate |
 | 4 | ⬜ | Ops & maintenance guardrails |
 
@@ -104,10 +104,22 @@ data/
 
 See the [ADR directory](docs/ADR/) for documented architectural decisions:
 - [ADR-001](docs/ADR/ADR-001-why-chroma-not-pinecone.md): Why ChromaDB over Pinecone
-- ADR-002: Reranker model choice (Phase 2)
+- [ADR-002](docs/ADR/ADR-002-reranker-choice.md): Reranker model choice (TinyBERT 14MB vs MiniLM-L-6 250MB)
 - ADR-003: Citation threshold recalibration (Phase 3)
+
+## Hybrid Search vs. Vector-Only Ranking
+
+In Phase 2, hybrid retrieval combines dense vector search with sparse BM25 keyword search via Reciprocal Rank Fusion ($k=60$).
+
+**Example Query**: `"achalasia diagnosis manometry"`
+
+| Retrieval Strategy | Target Chunk Rank | Rationale |
+|-------------------|-------------------|-----------|
+| Vector-Only | **Rank 2** | Embedding vectors group generic gastrointestinal topics near the top |
+| **Hybrid (RRF)** | **Rank 1 (Winner)** | BM25 keyword match for exact medical term `"achalasia"` boosts the rank to #1 |
 
 ## Storage Checkpoints
 
 - **Phase 0**: `.venv` ~1.35 GB | `data/` ~0 MB
 - **Phase 1**: `.venv` ~1.35 GB | `data/` ~15.5 MB (source PDF `Medical_book.pdf`)
+- **Phase 2**: `.venv` ~1.35 GB | `data/` ~64.3 MB (Chroma persistent DB + BM25 index + NLTK data)
