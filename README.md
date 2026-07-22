@@ -107,7 +107,7 @@ See the [ADR directory](docs/ADR/) for documented architectural decisions:
 - ADR-002: Reranker model choice (Phase 2)
 - ADR-003: Citation threshold recalibration (Phase 3)
 
-## Storage Checkpoint — Phase 0
+## Storage Checkpoints
 
-- `.venv`: ~1.35 GB (Torch CPU, sentence-transformers, ChromaDB, RAGAS, transformers, etc.)
-- `data/`: ~0 MB (empty skeleton)
+- **Phase 0**: `.venv` ~1.35 GB | `data/` ~0 MB
+- **Phase 1**: `.venv` ~1.35 GB | `data/` ~15.5 MB (source PDF `Medical_book.pdf`)
