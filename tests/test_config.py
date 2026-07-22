@@ -40,7 +40,7 @@ class TestSettings:
         """Settings must fail if GROQ_API_KEY is missing."""
         monkeypatch.delenv("GROQ_API_KEY", raising=False)
         with pytest.raises(ValidationError):
-            Settings()  # type: ignore[call-arg]
+            Settings(_env_file=None)  # type: ignore[call-arg]
 
     def test_default_values(self) -> None:
         settings = Settings()  # type: ignore[call-arg]

@@ -9,6 +9,7 @@ See [docs/architecture.md](docs/architecture.md) for the full pipeline diagram a
 | Component | Technology | Rationale |
 |-----------|------------|----------|
 | PDF Extraction | PyMuPDF (fitz) | Lightweight, no Poppler/Tesseract dependency |
+| Text Cleaning | De-hyphenation & Ligatures | `cleaner.py` cleans text BEFORE char offset calculation |
 | Chunking | MiniLM tokenizer-aware | 220-240 tokens, never exceeds 256 limit |
 | Embedding | all-MiniLM-L6-v2 | 384-dim, ~80MB, CPU-friendly |
 | Vector Store | ChromaDB (persistent) | Embedded, no server, O(1) lookups ([ADR-001](docs/ADR/ADR-001-why-chroma-not-pinecone.md)) |
@@ -17,6 +18,9 @@ See [docs/architecture.md](docs/architecture.md) for the full pipeline diagram a
 | LLM | Groq API (llama-3.3-70b) | No local weights, free tier |
 | Observability | Langfuse Cloud | No self-hosted (OOM risk) |
 | Eval | RAGAS | Phase 3 |
+
+> [!NOTE]
+> **Image & Diagram Tradeoff**: `get_text("blocks")` extracts layout text blocks without image rendering or OCR. Text baked directly into images or diagrams is invisible to this pipeline, as OCR (e.g., Tesseract/Poppler) is deliberately excluded to stay within the ~4GB RAM budget.
 
 ## Quick Start
 
@@ -91,7 +95,7 @@ data/
 | Phase | Status | Description |
 |-------|--------|-------------|
 | 0 | ✅ | Repo skeleton, config, types, logging, docs |
-| 1 | ⬜ | Ingest → Chunk → Embed → Retrieve → Cite |
+| 1 | ✅ | Ingest → Chunk → Embed → Retrieve → Cite |
 | 2 | ⬜ | Hybrid search, reranking, citation enforcement |
 | 3 | ⬜ | Golden dataset validation, RAGAS eval, CI gate |
 | 4 | ⬜ | Ops & maintenance guardrails |

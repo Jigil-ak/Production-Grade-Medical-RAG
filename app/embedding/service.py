@@ -9,6 +9,12 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
+from sentence_transformers import SentenceTransformer
+
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 @runtime_checkable
 class EmbeddingService(Protocol):
@@ -37,19 +43,43 @@ class MiniLMEmbeddingService:
     """
 
     def __init__(self, model_name: str = "all-MiniLM-L6-v2") -> None:
-        # Phase 1 fills in the actual SentenceTransformer load.
-        # Lazy loading: model instantiated HERE, not at import time.
+        """Initialize SentenceTransformer model inside constructor.
+
+        Args:
+            model_name: HuggingFace sentence-transformer model name.
+        """
+        logger.info("Initializing MiniLMEmbeddingService", model_name=model_name)
         self._model_name = model_name
-        self._model = None  # SentenceTransformer loaded in Phase 1
+        self._model = SentenceTransformer(model_name)
 
     def embed_query(self, text: str) -> list[float]:
-        """Embed a single query string."""
-        raise NotImplementedError("Phase 1")
+        """Embed a single query string.
+
+        Args:
+            text: Query string to embed.
+
+        Returns:
+            Embedding vector as a list of floats (384 floats for MiniLM).
+        """
+        embedding = self._model.encode(text, convert_to_numpy=True, normalize_embeddings=True)
+        return embedding.tolist()
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        """Embed a batch of document strings."""
-        raise NotImplementedError("Phase 1")
+        """Embed a batch of document strings.
+
+        Args:
+            texts: List of document strings.
+
+        Returns:
+            List of embedding vectors.
+        """
+        if not texts:
+            return []
+        embeddings = self._model.encode(
+            texts, convert_to_numpy=True, normalize_embeddings=True, show_progress_bar=False
+        )
+        return embeddings.tolist()
 
     def max_sequence_length(self) -> int:
         """Return the model's maximum input token count (256 for MiniLM)."""
-        raise NotImplementedError("Phase 1")
+        return int(self._model.max_seq_length)
