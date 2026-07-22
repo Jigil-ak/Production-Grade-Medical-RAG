@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=69.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "medical-rag"
+version = "0.1.0"
+description = "Production-grade medical document Q&A with citation enforcement"
+requires-python = ">=3.10,<3.13"
+# chromadb==0.5.0 predates Python 3.13's stable release, so no wheel
+# exists for it yet — cap here, not at 3.12.
+dependencies = [
+    "sentence-transformers==5.6.0",
+    # NOT 2.2.2 — that version hard-imports cached_download from
+    # huggingface_hub, which was removed in hub>=0.26. Any current
+    # environment will hit ImportError: cannot import name
+    # 'cached_download'. Confirmed via multiple reported issues.
+    "chromadb==0.5.0",
+    "pydantic==2.5.0",
+    "pydantic-settings==2.1.0",
+    "structlog==24.1.0",
+    "pymupdf==1.24.0",
+    "fastapi==0.109.0",
+    "uvicorn==0.27.0",
+    "python-dotenv==1.0.1",
+    "groq==0.4.2",
+    "httpx==0.27.0",
+    "nltk==3.9.1",
+    "bm25s==0.2.0",
+    "langfuse==2.42.0",
+    "ragas==0.1.19",
+    # Pinned intentionally — Phase 3's run_eval.py is written against
+    # the 0.1.x evaluate() API. Do not upgrade to 0.2+/0.4+ without
+    # rewriting that script for ragas's newer functional metrics API.
+    "langchain-groq==0.1.9",
+    "pytest==8.1.1",
+    "pytest-asyncio==0.23.5",
+    # Bridge pin: ragas==0.1.19 and this era of langchain-groq were
+    # built against numpy<2.0, while sentence-transformers==5.6.0's
+    # stack is comfortable with modern numpy. 1.26.4 is the last
+    # pre-2.0 release — it satisfies the older cluster's ceiling
+    # without forcing 2023-era torch/transformers pins back in.
+    # Do not remove this pin without re-verifying both clusters
+    # tolerate a newer numpy.
+    "numpy==1.26.4",
+]
+# Do NOT pin torch or transformers directly. sentence-transformers==5.6.0
+# will pull compatible modern versions on its own; hand-pinning them to
+# 2023-era numbers is what caused the cached_download conflict in the
+# first place.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.setuptools.packages.find]
+include = ["app*"]

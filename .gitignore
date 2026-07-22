@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Environment variables — NEVER commit
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project-specific: processed data (Chroma DB, BM25 index, NLTK data)
+data/processed/
+
+# Raw data content (gitignored, .gitkeep tracked)
+data/raw/*
+!data/raw/.gitkeep
+
+# Golden dataset content (gitignored, .gitkeep tracked)
+data/golden/*
+!data/golden/.gitkeep
+
+# Eval reports
+reports/
+
+# Pytest
+.pytest_cache/
+
+# Coverage
+htmlcov/
+.coverage
