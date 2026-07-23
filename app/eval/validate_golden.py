@@ -14,6 +14,7 @@ Hard Validation:
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -45,6 +46,7 @@ def validate_golden_dataset(
     Args:
         json_path: Path to the golden dataset JSON file.
         check_chroma: If True, resolve chunk_ids against persistent ChromaStore.
+                      If False (--schema-only mode), validate schema fields only.
 
     Returns:
         Tuple of (is_valid: bool, errors: list[str]).
@@ -67,7 +69,7 @@ def validate_golden_dataset(
     errors: list[str] = []
     items: list[GoldenItemSchema] = []
 
-    # 1. Schema Validation
+    # 1. Schema Validation (Field presence & types)
     for idx, sample in enumerate(raw_data, start=1):
         try:
             item = GoldenItemSchema.model_validate(sample)
@@ -78,7 +80,7 @@ def validate_golden_dataset(
     if errors:
         return False, errors
 
-    # 2. Hard Chunk ID Resolution against ChromaStore
+    # 2. Hard Chunk ID Resolution against ChromaStore (Skipped in --schema-only mode)
     if check_chroma:
         try:
             settings = get_settings()
@@ -105,17 +107,27 @@ def validate_golden_dataset(
 
 def main() -> None:
     """CLI entry point for validate_golden.py."""
-    if len(sys.argv) < 2:
-        print("Usage: python app/eval/validate_golden.py <path_to_golden_dataset.json>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Validate golden dataset schema and optionally resolve chunk IDs against ChromaStore."
+    )
+    parser.add_argument("dataset", help="Path to golden dataset JSON file")
+    parser.add_argument(
+        "--schema-only",
+        action="store_true",
+        help="Validate schema fields presence and types only, skipping ChromaStore chunk resolution",
+    )
+    args = parser.parse_args()
 
-    target_path = sys.argv[1]
-    print(f"Validating golden dataset: {target_path}...")
+    target_path = args.dataset
+    check_chroma = not args.schema_only
+    mode_str = "schema-only mode" if args.schema_only else "full mode (schema + Chroma resolution)"
 
-    is_valid, errors = validate_golden_dataset(target_path)
+    print(f"Validating golden dataset: {target_path} ({mode_str})...")
+
+    is_valid, errors = validate_golden_dataset(target_path, check_chroma=check_chroma)
 
     if is_valid:
-        print("SUCCESS: Golden dataset schema and chunk_ids validated successfully! [Exit 0]")
+        print("SUCCESS: Golden dataset validated successfully! [Exit 0]")
         sys.exit(0)
     else:
         print("FAILURE: Golden dataset validation failed with the following errors:")

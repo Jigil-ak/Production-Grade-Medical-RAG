@@ -57,6 +57,10 @@ copy .env.example .env
 > uvicorn app.main:app --reload
 > ```
 
+### Contributor Checklist
+
+- Before committing changes to `data/golden/*.json`, run `validate_golden.py` locally (no `--schema-only` flag) against your locally-ingested Chroma store to confirm every `chunk_id` still resolves.
+
 ## Phase Status
 
 | Phase | Status | Description |

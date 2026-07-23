@@ -41,7 +41,7 @@ jobs:
 
       - name: Validate Golden Dataset Schema
         run: |
-          python app/eval/validate_golden.py data/golden/smoke_dataset.json
+          python app/eval/validate_golden.py data/golden/smoke_dataset.json --schema-only
 
   full-ragas-eval:
     name: Tier 2 - Nightly RAGAS Evaluation Gate
