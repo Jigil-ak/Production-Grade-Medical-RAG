@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -34,6 +35,7 @@ from datasets import Dataset
 # RAGAS internals. Do not replace ChatGroq with GroqClient here!
 from langchain_groq import ChatGroq
 from ragas import evaluate
+from ragas.run_config import RunConfig
 from ragas.metrics import (
     answer_relevancy,
     context_precision,
@@ -82,11 +84,7 @@ def run_ragas_evaluate_with_retry(
         metrics=metrics,
         llm=llm,
         embeddings=embeddings,
-        # max_workers=1 is CRITICAL:
-        # 1. Spawning multiple workers duplicates Chroma + MiniLM (~300MB each) causing OOM on 4GB RAM.
-        # 2. It respects Groq free-tier API rate limits (TPM/RPM).
-        max_workers=1,
-        is_async=False,
+        run_config=RunConfig(max_workers=1),
     )
 
 
