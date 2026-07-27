@@ -83,7 +83,7 @@ def get_services() -> tuple[
 
     if _llm_client is None:
         api_key = settings.groq_api_key.get_secret_value()
-        _llm_client = GroqClient(api_key=api_key)
+        _llm_client = GroqClient(api_key=api_key, model=settings.groq_model_name)
 
     return (
         _embedding_service,

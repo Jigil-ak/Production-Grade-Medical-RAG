@@ -46,8 +46,9 @@ class Settings(BaseSettings):
     # --- Storage ---
     chroma_persist_dir: str = "./data/processed/chroma"
 
-    # --- Embedding ---
+    # --- Embedding & LLM ---
     embedding_model_name: str = "all-MiniLM-L6-v2"
+    groq_model_name: str = "openai/gpt-oss-120b"
 
     # --- Observability ---
     # LANGFUSE_HOST must point at cloud.langfuse.com ONLY.

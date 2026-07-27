@@ -28,20 +28,27 @@ class LLMClient(Protocol):
 
 
 class GroqClient:
-    """Groq API client for llama-3.3-70b-versatile.
+    """Groq API client for LLM completions (default: openai/gpt-oss-120b).
 
-    Reads GROQ_API_KEY from settings — never hardcoded or logged.
+    Reads GROQ_API_KEY and model settings — never hardcoded or logged.
     """
 
-    def __init__(self, api_key: str, model: str = DEFAULT_LLM_MODEL) -> None:
+    def __init__(self, api_key: str, model: str | None = None) -> None:
         """Initialize Groq API client.
 
         Args:
             api_key: Groq API key secret string.
-            model: Groq model name (default: llama-3.3-70b-versatile).
+            model: Groq model name (default: from settings.groq_model_name or DEFAULT_LLM_MODEL).
         """
         if not api_key:
             raise ValueError("Groq API key must be provided")
+
+        if model is None:
+            try:
+                from app.core.config import get_settings
+                model = get_settings().groq_model_name
+            except Exception:
+                model = DEFAULT_LLM_MODEL
 
         self._model = model
         self._client = Groq(api_key=api_key)

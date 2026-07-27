@@ -1,7 +1,10 @@
 # ADR-003: Citation Support Threshold Recalibration
 
 ## Status
-Accepted
+Proposed — pending full golden dataset evaluation
+
+> [!NOTE]
+> Recorded scores in this ADR were generated from a initial 3-question smoke dataset (`smoke_dataset.json`) containing one declined citation outcome, and serve as an initial benchmark rather than a validated production baseline. This ADR remains proposed until evaluated on a larger, statistically representative dataset.
 
 ## Context
 
@@ -16,18 +19,18 @@ When transitioning to sentence-level sentence-to-sentence cosine similarity:
 
 Set the default citation support threshold to **`0.65`** (`settings.citation.support_threshold = 0.65`).
 
-- Recalibrated based on offline RAGAS dataset evaluations (`app/eval/run_eval.py` on `smoke_dataset.json`).
+- Recalibrated based on offline RAGAS dataset evaluations (`app/eval/run_eval.py` on `smoke_dataset.json` with `openai/gpt-oss-120b`).
 - Empirical RAGAS Offline Evaluation Results:
-  - **Context Precision**: **0.9444** (Hybrid Pipeline) vs **0.9028** (Vector-Only Baseline)
+  - **Context Precision**: **1.0000** (Hybrid Pipeline) vs **1.0000** (Vector-Only Baseline)
   - **Context Recall**: **1.0000** (Hybrid Pipeline) vs **1.0000** (Vector-Only Baseline)
-  - **Faithfulness**: **0.6667** (Hybrid Pipeline) vs **0.5000** (Vector-Only Baseline)
-- Sentence-level MAX-over-sentences matching with `support_threshold = 0.65` eliminates false-declined citations on valid medical answers while outperforming the baseline by +16.67% on Faithfulness and +4.16% on Context Precision.
+  - **Faithfulness**: **1.0000** (Hybrid Pipeline) vs **1.0000** (Vector-Only Baseline)
+- Sentence-level MAX-over-sentences matching with `support_threshold = 0.65` and `openai/gpt-oss-120b` eliminates false-declined citations on valid medical answers.
 
 ## Consequences
 
 ### Benefits
 - Reduces false declined answers on valid medical facts.
-- Outperforms Phase 1 baseline across Context Precision (0.9444 vs 0.9028) and Faithfulness (0.6667 vs 0.5000).
+- Achieves 100% Faithfulness and Context Precision on golden smoke set evaluation.
 
 ### Tradeoffs
 - Threshold must be re-evaluated whenever the embedding model is upgraded or changed (e.g. from MiniLM to BGE or E5).

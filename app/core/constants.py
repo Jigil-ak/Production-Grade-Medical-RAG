@@ -8,7 +8,7 @@ APP_NAME = "medical-rag"
 APP_VERSION = "0.1.0"
 
 # Default LLM model identifier for Groq API
-DEFAULT_LLM_MODEL = "llama-3.3-70b-versatile"
+DEFAULT_LLM_MODEL = "openai/gpt-oss-120b"
 
 # Chroma collection name
 CHROMA_COLLECTION_NAME = "medical_chunks"

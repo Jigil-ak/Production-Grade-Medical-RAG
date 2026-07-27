@@ -33,8 +33,10 @@ from datasets import Dataset
 # RAGAS 0.1.19's evaluate() engine requires a LangChain-native BaseChatModel instance
 # (e.g. ChatGroq). Passing our custom GroqClient Protocol raises AttributeError inside
 # RAGAS internals. Do not replace ChatGroq with GroqClient here!
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_groq import ChatGroq
 from ragas import evaluate
+from ragas.embeddings import LangchainEmbeddingsWrapper
 from ragas.run_config import RunConfig
 from ragas.metrics import (
     answer_relevancy,
@@ -84,7 +86,7 @@ def run_ragas_evaluate_with_retry(
         metrics=metrics,
         llm=llm,
         embeddings=embeddings,
-        run_config=RunConfig(max_workers=1),
+        run_config=RunConfig(max_workers=1, timeout=600, max_retries=10),
     )
 
 
@@ -160,8 +162,11 @@ def evaluate_dataset(dataset_path: Path) -> dict[str, Any]:
     settings = get_settings()
     api_key = settings.groq_api_key.get_secret_value()
 
-    # ChatGroq judge model for RAGAS
-    judge_llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=api_key)
+    # ChatGroq judge model and HuggingFace embeddings for RAGAS
+    judge_llm = ChatGroq(model=settings.groq_model_name, api_key=api_key)
+    judge_embeddings = LangchainEmbeddingsWrapper(
+        HuggingFaceEmbeddings(model_name=settings.embedding_model_name)
+    )
 
     # 1. Run Phase 2 Hybrid + Rerank pipeline
     logger.info("Running Phase 2 Hybrid Pipeline inference...")
@@ -177,11 +182,11 @@ def evaluate_dataset(dataset_path: Path) -> dict[str, Any]:
 
     # Evaluate hybrid pipeline
     logger.info("Evaluating Phase 2 Hybrid Pipeline with RAGAS (max_workers=1)...")
-    hybrid_results = run_ragas_evaluate_with_retry(hybrid_ds, eval_metrics, judge_llm, None)
+    hybrid_results = run_ragas_evaluate_with_retry(hybrid_ds, eval_metrics, judge_llm, judge_embeddings)
 
     # Evaluate vector-only baseline
     logger.info("Evaluating Phase 1 Vector-Only Baseline with RAGAS (max_workers=1)...")
-    vector_results = run_ragas_evaluate_with_retry(vector_ds, eval_metrics, judge_llm, None)
+    vector_results = run_ragas_evaluate_with_retry(vector_ds, eval_metrics, judge_llm, judge_embeddings)
 
     # 3. Diagnostic Breakdown by question_type
     per_type_scores: dict[str, dict[str, list[float]]] = {}
