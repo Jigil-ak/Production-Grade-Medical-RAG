@@ -33,8 +33,9 @@ data/processed/
 data/raw/*
 !data/raw/.gitkeep
 
-# Golden dataset content (gitignored, .gitkeep tracked)
-data/golden/*
+# Golden dataset content (gitignored, .gitkeep and smoke_dataset.json tracked)
+data/golden/*.json
+!data/golden/smoke_dataset.json
 !data/golden/.gitkeep
 
 # Eval reports

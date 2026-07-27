@@ -1,0 +1,29 @@
+[
+  {
+    "question": "What approach does holistic medicine emphasize regarding mind and body?",
+    "ground_truth_answer": "Holistic medicine emphasizes the connection between mind and body, aiming at achieving overall wellness and balance.",
+    "ground_truth_chunk_ids": [
+      "02aa9572174a5ea4"
+    ],
+    "question_type": "treatment_protocol",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What soft tissue injuries can be treated with high-intensity ultrasound?",
+    "ground_truth_answer": "High-intensity ultrasound is routinely used to treat soft tissue injuries including strains, tears, and associated scarring through heating and agitation.",
+    "ground_truth_chunk_ids": [
+      "0369ea1a43bb1e93"
+    ],
+    "question_type": "treatment_protocol",
+    "difficulty": "medium"
+  },
+  {
+    "question": "How are cross-references utilized in medical encyclopedias?",
+    "ground_truth_answer": "Cross-references placed throughout the encyclopedia direct readers to where information on subjects without separate entries can be found.",
+    "ground_truth_chunk_ids": [
+      "0503de5d4effb217"
+    ],
+    "question_type": "symptom_diagnosis",
+    "difficulty": "easy"
+  }
+]
