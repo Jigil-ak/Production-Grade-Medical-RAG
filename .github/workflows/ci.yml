@@ -68,6 +68,11 @@ jobs:
         run: |
           python app/eval/run_eval.py --dataset ${{ inputs.dataset || 'data/golden/smoke_dataset.json' }}
 
+      - name: Print Evaluation Report Logs
+        if: always()
+        run: |
+          cat reports/*.json || true
+
       - name: Upload Evaluation Reports
         if: always()
         uses: actions/upload-artifact@v4
