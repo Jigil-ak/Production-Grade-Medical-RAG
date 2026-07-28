@@ -178,6 +178,8 @@ def evaluate_dataset(dataset_path: Path) -> dict[str, Any]:
     """Run RAGAS evaluation, calculate per-question_type metrics, and export JSON report."""
     settings = get_settings()
     api_key = settings.groq_api_key.get_secret_value()
+    key_prefix = api_key[:4] if api_key else "NONE"
+    logger.info("Initializing RAGAS evaluation", key_length=len(api_key), key_prefix=f"{key_prefix}***")
 
     # ChatGroq judge model and HuggingFace embeddings for RAGAS
     judge_llm = ChatGroq(model=settings.groq_model_name, api_key=api_key)
