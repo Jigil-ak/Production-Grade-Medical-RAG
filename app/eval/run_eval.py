@@ -113,24 +113,18 @@ def run_pipeline_inference(
     citation_enforcer = CitationEnforcer(embedding_service=embedding_service)
     llm_client = GroqClient(api_key=settings.groq_api_key.get_secret_value(), model=settings.groq_model_name)
 
-    # If running in CI or fresh environment where vector_store is empty, auto-seed ground truth chunks
+    # If running in CI or fresh environment where vector_store is empty, seed from real fixture
     if vector_store.count() == 0:
-        logger.info("ChromaStore is empty — auto-seeding synthetic evaluation chunks for golden dataset...")
-        seed_chunks: list[Chunk] = []
-        for item in raw_data:
-            gt_ids = item.get("ground_truth_chunk_ids", [])
-            gt_text = item.get("ground_truth_answer", "")
-            cid = gt_ids[0] if gt_ids else "eval_seed_chunk"
-            chunk = Chunk(
-                chunk_id=cid,
-                source_filename="golden_seed.pdf",
-                page_number=1,
-                char_start=0,
-                char_end=len(gt_text),
-                chunk_text=gt_text,
-                token_count=len(gt_text.split()),
-            )
-            seed_chunks.append(chunk)
+        fixture_path = Path("data/fixtures/eval_chunks.json")
+        if not fixture_path.exists():
+            raise FileNotFoundError(f"Evaluation fixture not found at {fixture_path}")
+
+        logger.info(
+            "ChromaStore is empty — seeding real evaluation fixture chunks from data/fixtures/eval_chunks.json...",
+            fixture_path=str(fixture_path),
+        )
+        fixture_raw = json.loads(fixture_path.read_text(encoding="utf-8"))
+        seed_chunks = [Chunk.model_validate(item) for item in fixture_raw]
 
         embeddings = embedding_service.embed_documents([c.chunk_text for c in seed_chunks])
         vector_store.upsert(seed_chunks, embeddings)
