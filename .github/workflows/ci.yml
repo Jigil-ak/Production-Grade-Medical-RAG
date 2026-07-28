@@ -46,6 +46,7 @@ jobs:
   full-ragas-eval:
     name: Tier 2 - Nightly RAGAS Evaluation Gate
     needs: fast-smoke-test
+    environment: production
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
