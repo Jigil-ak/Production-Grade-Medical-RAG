@@ -40,6 +40,7 @@ class GroqClient:
             api_key: Groq API key secret string.
             model: Groq model name (default: from settings.groq_model_name or DEFAULT_LLM_MODEL).
         """
+        api_key = api_key.strip().strip("'\"") if api_key else ""
         if not api_key:
             raise ValueError("Groq API key must be provided")
 

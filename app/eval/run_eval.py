@@ -189,7 +189,7 @@ def _clean_score(val: Any) -> float:
 def evaluate_dataset(dataset_path: Path) -> dict[str, Any]:
     """Run RAGAS evaluation, calculate per-question_type metrics, and export JSON report."""
     settings = get_settings()
-    api_key = settings.groq_api_key.get_secret_value()
+    api_key = settings.groq_api_key.get_secret_value().strip().strip("'\"")
     key_prefix = api_key[:4] if api_key else "NONE"
     logger.info("Initializing RAGAS evaluation", key_length=len(api_key), key_prefix=f"{key_prefix}***")
 
