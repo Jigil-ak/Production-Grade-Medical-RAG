@@ -307,6 +307,8 @@ def main() -> None:
         report = evaluate_dataset(ds_path)
     except Exception as e:
         print(f"ERROR: RAGAS evaluation failed: {e}")
+        import traceback
+        traceback.print_exc()
         # Always write an error report artifact so CI upload step finds reports/*.json
         reports_dir = Path("./reports")
         reports_dir.mkdir(parents=True, exist_ok=True)
