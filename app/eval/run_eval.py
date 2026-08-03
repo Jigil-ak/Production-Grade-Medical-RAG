@@ -164,6 +164,15 @@ def run_pipeline_inference(
 
         answer_text = final_res.answer or "The provided context does not contain sufficient information."
 
+        logger.info(
+            "Generated sample for evaluation",
+            mode=mode,
+            question=question,
+            retrieved_chunks=len(chunks),
+            answer_preview=answer_text[:120].encode("ascii", "replace").decode("ascii"),
+            status=final_res.status,
+        )
+
         ragas_samples.append(
             {
                 "question": question,
@@ -176,15 +185,14 @@ def run_pipeline_inference(
     return ragas_samples, question_types
 
 
-def _clean_score(val: Any) -> float:
-    """Sanitize float metric scores, converting NaN/Inf to 0.0 for valid JSON serialization."""
-    try:
-        f_val = float(val)
-        if math.isnan(f_val) or math.isinf(f_val):
-            return 0.0
-        return round(f_val, 4)
-    except (TypeError, ValueError):
+def _aggregate_metric_from_df(df: Any, metric_name: str) -> float:
+    """Compute average over valid non-NaN scores in a pandas DataFrame column."""
+    if metric_name not in df.columns:
         return 0.0
+    series = df[metric_name].dropna()
+    if series.empty:
+        return 0.0
+    return round(float(series.mean()), 4)
 
 
 def evaluate_dataset(dataset_path: Path) -> dict[str, Any]:
@@ -194,8 +202,9 @@ def evaluate_dataset(dataset_path: Path) -> dict[str, Any]:
     key_prefix = api_key[:4] if api_key else "NONE"
     logger.info("Initializing RAGAS evaluation", key_length=len(api_key), key_prefix=f"{key_prefix}***")
 
-    # ChatGroq judge model and HuggingFace embeddings for RAGAS
-    judge_llm = ChatGroq(model=settings.groq_model_name, api_key=api_key)
+    # Use dense llama-3.3-70b-versatile model as RAGAS judge LLM to ensure clean output parsing for answer_relevancy
+    judge_model = "llama-3.3-70b-versatile"
+    judge_llm = ChatGroq(model=judge_model, api_key=api_key)
     judge_embeddings = LangchainEmbeddingsWrapper(
         HuggingFaceEmbeddings(model_name=settings.embedding_model_name)
     )
@@ -215,56 +224,41 @@ def evaluate_dataset(dataset_path: Path) -> dict[str, Any]:
     # Evaluate hybrid pipeline
     logger.info("Evaluating Phase 2 Hybrid Pipeline with RAGAS (max_workers=1)...")
     hybrid_results = run_ragas_evaluate_with_retry(hybrid_ds, eval_metrics, judge_llm, judge_embeddings)
+    df_hybrid = hybrid_results.to_pandas()
+    logger.info("Phase 2 Hybrid RAGAS evaluation per-sample output:\n" + df_hybrid.to_string())
 
     # Evaluate vector-only baseline
     logger.info("Evaluating Phase 1 Vector-Only Baseline with RAGAS (max_workers=1)...")
     vector_results = run_ragas_evaluate_with_retry(vector_ds, eval_metrics, judge_llm, judge_embeddings)
+    df_vector = vector_results.to_pandas()
+    logger.info("Phase 1 Vector-Only Baseline RAGAS evaluation per-sample output:\n" + df_vector.to_string())
 
     # 3. Diagnostic Breakdown by question_type
-    per_type_scores: dict[str, dict[str, list[float]]] = {}
-    df_results = hybrid_results.to_pandas()
-
-    for idx, q_type in enumerate(q_types):
-        if q_type not in per_type_scores:
-            per_type_scores[q_type] = {
-                "faithfulness": [],
-                "answer_relevancy": [],
-                "context_precision": [],
-                "context_recall": [],
-            }
-
-        row = df_results.iloc[idx]
-        for m in ["faithfulness", "answer_relevancy", "context_precision", "context_recall"]:
-            val = _clean_score(row.get(m, 0.0))
-            per_type_scores[q_type][m].append(val)
-
+    metrics_list = ["faithfulness", "answer_relevancy", "context_precision", "context_recall"]
     type_aggregates: dict[str, dict[str, float]] = {}
-    for q_type, m_dict in per_type_scores.items():
+    
+    unique_types = list(dict.fromkeys(q_types))
+    for q_type in unique_types:
+        indices = [i for i, t in enumerate(q_types) if t == q_type]
+        sub_df = df_hybrid.iloc[indices]
         type_aggregates[q_type] = {
-            m: _clean_score(sum(vals) / len(vals)) if vals else 0.0 for m, vals in m_dict.items()
+            m: _aggregate_metric_from_df(sub_df, m) for m in metrics_list
         }
 
-    # 4. Prepare Report
-    h_faith = _clean_score(hybrid_results.get("faithfulness", 0.0))
-    h_prec = _clean_score(hybrid_results.get("context_precision", 0.0))
+    # 4. Prepare Report using unified aggregation over df_hybrid and df_vector
+    h_scores = {m: _aggregate_metric_from_df(df_hybrid, m) for m in metrics_list}
+    v_scores = {m: _aggregate_metric_from_df(df_vector, m) for m in metrics_list}
+
+    h_faith = h_scores["faithfulness"]
+    h_prec = h_scores["context_precision"]
 
     report = {
         "timestamp": datetime.utcnow().isoformat(),
         "dataset": dataset_path.name,
         "sample_count": len(hybrid_samples),
         "overall_scores": {
-            "hybrid_pipeline": {
-                "faithfulness": h_faith,
-                "answer_relevancy": _clean_score(hybrid_results.get("answer_relevancy", 0.0)),
-                "context_precision": h_prec,
-                "context_recall": _clean_score(hybrid_results.get("context_recall", 0.0)),
-            },
-            "vector_only_baseline": {
-                "faithfulness": _clean_score(vector_results.get("faithfulness", 0.0)),
-                "answer_relevancy": _clean_score(vector_results.get("answer_relevancy", 0.0)),
-                "context_precision": _clean_score(vector_results.get("context_precision", 0.0)),
-                "context_recall": _clean_score(vector_results.get("context_recall", 0.0)),
-            },
+            "hybrid_pipeline": h_scores,
+            "vector_only_baseline": v_scores,
         },
         "by_question_type": type_aggregates,
         "threshold_gate": {

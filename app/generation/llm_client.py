@@ -55,8 +55,20 @@ class GroqClient:
         self._client = Groq(api_key=api_key)
         logger.info("Initialized GroqClient", model=self._model)
 
+    def _call_completion(self, model: str, system_prompt: str, user_prompt: str) -> str:
+        response = self._client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.1,
+            max_tokens=1024,
+        )
+        return response.choices[0].message.content or ""
+
     def generate(self, system_prompt: str, user_prompt: str) -> str:
-        """Generate a completion from Groq API.
+        """Generate a completion from Groq API with rate-limit fallback.
 
         Args:
             system_prompt: System prompt instructing the model behavior.
@@ -66,18 +78,16 @@ class GroqClient:
             Completion string output from the LLM.
         """
         try:
-            response = self._client.chat.completions.create(
-                model=self._model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.1,
-                max_tokens=1024,
-            )
-            content = response.choices[0].message.content or ""
-            return content
+            return self._call_completion(self._model, system_prompt, user_prompt)
         except Exception as e:
+            if "rate_limit" in str(e).lower() or "429" in str(e) or "RateLimitError" in type(e).__name__:
+                fallback_model = "llama-3.3-70b-versatile"
+                logger.warn("Primary model rate-limited, falling back", primary=self._model, fallback=fallback_model)
+                try:
+                    return self._call_completion(fallback_model, system_prompt, user_prompt)
+                except Exception as fallback_err:
+                    logger.error("Fallback Groq model also failed", fallback=fallback_model, error=str(fallback_err))
+                    raise RuntimeError(f"Groq API fallback error: {fallback_err}") from fallback_err
             logger.error("Groq API call failed", model=self._model, error=str(e))
             raise RuntimeError(f"Groq API error: {e}") from e
 
