@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import time
 from datetime import datetime
@@ -174,6 +175,17 @@ def run_pipeline_inference(
     return ragas_samples, question_types
 
 
+def _clean_score(val: Any) -> float:
+    """Sanitize float metric scores, converting NaN/Inf to 0.0 for valid JSON serialization."""
+    try:
+        f_val = float(val)
+        if math.isnan(f_val) or math.isinf(f_val):
+            return 0.0
+        return round(f_val, 4)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def evaluate_dataset(dataset_path: Path) -> dict[str, Any]:
     """Run RAGAS evaluation, calculate per-question_type metrics, and export JSON report."""
     settings = get_settings()
@@ -222,40 +234,43 @@ def evaluate_dataset(dataset_path: Path) -> dict[str, Any]:
 
         row = df_results.iloc[idx]
         for m in ["faithfulness", "answer_relevancy", "context_precision", "context_recall"]:
-            val = float(row.get(m, 0.0))
+            val = _clean_score(row.get(m, 0.0))
             per_type_scores[q_type][m].append(val)
 
     type_aggregates: dict[str, dict[str, float]] = {}
     for q_type, m_dict in per_type_scores.items():
         type_aggregates[q_type] = {
-            m: round(sum(vals) / len(vals), 4) if vals else 0.0 for m, vals in m_dict.items()
+            m: _clean_score(sum(vals) / len(vals)) if vals else 0.0 for m, vals in m_dict.items()
         }
 
     # 4. Prepare Report
+    h_faith = _clean_score(hybrid_results.get("faithfulness", 0.0))
+    h_prec = _clean_score(hybrid_results.get("context_precision", 0.0))
+
     report = {
         "timestamp": datetime.utcnow().isoformat(),
         "dataset": dataset_path.name,
         "sample_count": len(hybrid_samples),
         "overall_scores": {
             "hybrid_pipeline": {
-                "faithfulness": round(float(hybrid_results.get("faithfulness", 0.0)), 4),
-                "answer_relevancy": round(float(hybrid_results.get("answer_relevancy", 0.0)), 4),
-                "context_precision": round(float(hybrid_results.get("context_precision", 0.0)), 4),
-                "context_recall": round(float(hybrid_results.get("context_recall", 0.0)), 4),
+                "faithfulness": h_faith,
+                "answer_relevancy": _clean_score(hybrid_results.get("answer_relevancy", 0.0)),
+                "context_precision": h_prec,
+                "context_recall": _clean_score(hybrid_results.get("context_recall", 0.0)),
             },
             "vector_only_baseline": {
-                "faithfulness": round(float(vector_results.get("faithfulness", 0.0)), 4),
-                "answer_relevancy": round(float(vector_results.get("answer_relevancy", 0.0)), 4),
-                "context_precision": round(float(vector_results.get("context_precision", 0.0)), 4),
-                "context_recall": round(float(vector_results.get("context_recall", 0.0)), 4),
+                "faithfulness": _clean_score(vector_results.get("faithfulness", 0.0)),
+                "answer_relevancy": _clean_score(vector_results.get("answer_relevancy", 0.0)),
+                "context_precision": _clean_score(vector_results.get("context_precision", 0.0)),
+                "context_recall": _clean_score(vector_results.get("context_recall", 0.0)),
             },
         },
         "by_question_type": type_aggregates,
         "threshold_gate": {
             "faithfulness_target": FAITHFULNESS_THRESHOLD,
             "context_precision_target": CONTEXT_PRECISION_THRESHOLD,
-            "faithfulness_passed": float(hybrid_results.get("faithfulness", 0.0)) >= FAITHFULNESS_THRESHOLD,
-            "context_precision_passed": float(hybrid_results.get("context_precision", 0.0)) >= CONTEXT_PRECISION_THRESHOLD,
+            "faithfulness_passed": h_faith >= FAITHFULNESS_THRESHOLD,
+            "context_precision_passed": h_prec >= CONTEXT_PRECISION_THRESHOLD,
         },
     }
 
