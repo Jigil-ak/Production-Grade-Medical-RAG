@@ -84,10 +84,14 @@ jobs:
           fi
           python app/eval/run_eval.py --dataset "$DATASET"
 
-      - name: Print Evaluation Report Logs
+      - name: Print & Publish Evaluation Report Summary
         if: always()
         run: |
           cat reports/*.json || true
+          echo "### Evaluation Report Artifact Summary" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat reports/*.json >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "No report file found" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Evaluation Reports
         if: always()
