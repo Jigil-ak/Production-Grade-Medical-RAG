@@ -129,6 +129,8 @@ class BM25Index:
         """Save BM25 index and chunk map to disk."""
         if self._retriever is not None:
             self._index_dir.mkdir(parents=True, exist_ok=True)
+            if hasattr(self._retriever, "vocab_dict") and isinstance(self._retriever.vocab_dict, dict):
+                self._retriever.vocab_dict = {str(k): v for k, v in self._retriever.vocab_dict.items()}
             self._retriever.save(str(self._index_dir), corpus=None)
 
     def _load_index(self) -> bool:

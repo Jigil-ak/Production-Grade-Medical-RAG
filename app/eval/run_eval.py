@@ -49,6 +49,7 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ex
 
 from app.core.config import get_settings
 from app.core.logging import get_logger
+from app.core.types import Chunk
 from app.embedding.service import MiniLMEmbeddingService
 from app.eval.validate_golden import validate_golden_dataset
 from app.generation.citation_enforcer import CitationEnforcer
